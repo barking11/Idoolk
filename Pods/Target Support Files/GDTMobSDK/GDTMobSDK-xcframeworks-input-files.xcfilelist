@@ -1,0 +1,3 @@
+${PODS_ROOT}/Target Support Files/GDTMobSDK/GDTMobSDK-xcframeworks.sh
+${PODS_ROOT}/GDTMobSDK/GDTFramework/GDTMobSDK.xcframework
+${PODS_ROOT}/GDTMobSDK/GDTFramework/Tquic.xcframework

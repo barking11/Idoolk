@@ -45,6 +45,11 @@
 		81915E9A2D9DA3620012BA07 /* DeviceInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81915E942D9DA3620012BA07 /* DeviceInfo.swift */; };
 		81915E9B2D9DA3620012BA07 /* UIHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81915E962D9DA3620012BA07 /* UIHelper.swift */; };
 		81A532632DA0141100449878 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A532622DA0141100449878 /* SearchView.swift */; };
+		81AD00072E00000100000001 /* GDTAdConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81AD00022E00000100000001 /* GDTAdConfig.swift */; };
+		81AD00082E00000100000001 /* GDTAdService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81AD00032E00000100000001 /* GDTAdService.swift */; };
+		81AD00092E00000100000001 /* GDTBannerAdView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81AD00042E00000100000001 /* GDTBannerAdView.swift */; };
+		81AD000A2E00000100000001 /* GDTNativeExpressAdView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81AD00052E00000100000001 /* GDTNativeExpressAdView.swift */; };
+		81AD000B2E00000100000001 /* GDTAdUIKitHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81AD00062E00000100000001 /* GDTAdUIKitHelpers.swift */; };
 		81F5A6522DBD408A00B7DCDB /* GroupSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81F5A6512DBD408A00B7DCDB /* GroupSectionView.swift */; };
 /* End PBXBuildFile section */
 
@@ -88,6 +93,11 @@
 		81915E962D9DA3620012BA07 /* UIHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIHelper.swift; sourceTree = "<group>"; };
 		81915E972D9DA3620012BA07 /* ViewModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModifiers.swift; sourceTree = "<group>"; };
 		81A532622DA0141100449878 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		81AD00022E00000100000001 /* GDTAdConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GDTAdConfig.swift; sourceTree = "<group>"; };
+		81AD00032E00000100000001 /* GDTAdService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GDTAdService.swift; sourceTree = "<group>"; };
+		81AD00042E00000100000001 /* GDTBannerAdView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GDTBannerAdView.swift; sourceTree = "<group>"; };
+		81AD00052E00000100000001 /* GDTNativeExpressAdView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GDTNativeExpressAdView.swift; sourceTree = "<group>"; };
+		81AD00062E00000100000001 /* GDTAdUIKitHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GDTAdUIKitHelpers.swift; sourceTree = "<group>"; };
 		81F5A6512DBD408A00B7DCDB /* GroupSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupSectionView.swift; sourceTree = "<group>"; };
 		A2BFAFA5F9B1938B24126167 /* Pods-Idoolk.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Idoolk.release.xcconfig"; path = "Target Support Files/Pods-Idoolk/Pods-Idoolk.release.xcconfig"; sourceTree = "<group>"; };
 		B31B21A4A753066098A8834A /* Pods_Idoolk.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Idoolk.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -189,6 +199,7 @@
 			isa = PBXGroup;
 			children = (
 				81567A012DA835ED00370FF0 /* API */,
+				81AD00012E00000100000001 /* Ads */,
 				81915E942D9DA3620012BA07 /* DeviceInfo.swift */,
 				81915E952D9DA3620012BA07 /* ScreenExtension.swift */,
 				81915E962D9DA3620012BA07 /* UIHelper.swift */,
@@ -255,6 +266,18 @@
 				81F5A6512DBD408A00B7DCDB /* GroupSectionView.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		81AD00012E00000100000001 /* Ads */ = {
+			isa = PBXGroup;
+			children = (
+				81AD00022E00000100000001 /* GDTAdConfig.swift */,
+				81AD00032E00000100000001 /* GDTAdService.swift */,
+				81AD00042E00000100000001 /* GDTBannerAdView.swift */,
+				81AD00052E00000100000001 /* GDTNativeExpressAdView.swift */,
+				81AD00062E00000100000001 /* GDTAdUIKitHelpers.swift */,
+			);
+			path = Ads;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -383,6 +406,8 @@
 				816A78022D9464A700540A00 /* ScheduleView.swift in Sources */,
 				8155F8E42D9C4DD400DCA627 /* RealmManager.swift in Sources */,
 				8155F8E52D9C4DD400DCA627 /* RealmModels.swift in Sources */,
+				81AD00072E00000100000001 /* GDTAdConfig.swift in Sources */,
+				81AD00082E00000100000001 /* GDTAdService.swift in Sources */,
 				816A77FC2D89D63100540A00 /* LoadingView.swift in Sources */,
 				816A77F32D89D37700540A00 /* ProfileView.swift in Sources */,
 				816A77F42D89D37700540A00 /* CustomTabBar.swift in Sources */,
@@ -402,6 +427,9 @@
 				813465A62DAD781100DC3E7B /* HomeAPIModels.swift in Sources */,
 				81863D222DB406E800A030FA /* RatingDistribution.swift in Sources */,
 				813465A72DAD781100DC3E7B /* DetailAPIModels.swift in Sources */,
+				81AD00092E00000100000001 /* GDTBannerAdView.swift in Sources */,
+				81AD000A2E00000100000001 /* GDTNativeExpressAdView.swift in Sources */,
+				81AD000B2E00000100000001 /* GDTAdUIKitHelpers.swift in Sources */,
 				81915E982D9DA3620012BA07 /* ViewModifiers.swift in Sources */,
 				81915E992D9DA3620012BA07 /* ScreenExtension.swift in Sources */,
 				81A532632DA0141100449878 /* SearchView.swift in Sources */,

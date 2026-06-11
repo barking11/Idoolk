@@ -1,20 +1,24 @@
 PODS:
-  - Alamofire (5.10.2)
-  - Kingfisher (8.3.1)
+  - Alamofire (5.11.2)
+  - GDTMobSDK (4.15.90)
+  - Kingfisher (8.9.0)
 
 DEPENDENCIES:
   - Alamofire
+  - GDTMobSDK
   - Kingfisher
 
 SPEC REPOS:
-  https://mirrors.tuna.tsinghua.edu.cn/git/CocoaPods/Specs.git:
+  trunk:
     - Alamofire
+    - GDTMobSDK
     - Kingfisher
 
 SPEC CHECKSUMS:
-  Alamofire: 7193b3b92c74a07f85569e1a6c4f4237291e7496
-  Kingfisher: 3204d23de16b5ea53541c44ca5a8efb55741dec3
+  Alamofire: 400275dd1c6d87d95a041861d2a59da4b520a203
+  GDTMobSDK: fdec348687362cf20effb182286a5d1fbd3e8467
+  Kingfisher: 90f3a3c2871a71e01d5493c1c196fc2d3ff132cf
 
-PODFILE CHECKSUM: 25dffd7d55f0b3720c36873dfda593a11c191136
+PODFILE CHECKSUM: 41530a6189a19e9a504369ada8dbd9efa704ff8a
 
 COCOAPODS: 1.13.0

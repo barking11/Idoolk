@@ -623,29 +623,38 @@ open class ImageCache: @unchecked Sendable {
 
             // Begin to disk search.
             self.retrieveImageInDiskCache(forKey: key, options: options, callbackQueue: callbackQueue) {
-                result in
-                switch result {
-                case .success(let image):
-
-                    guard let image = image else {
-                        // No image found in disk storage.
+                (outcome: Result<DiskRetrievalOutcome, KingfisherError>) in
+                switch outcome {
+                case .success(let diskOutcome):
+                    switch diskOutcome {
+                    case .stale:
+                        // `stale` is an internal distinction used to avoid memory promotion.
+                        // It is mapped back to `.none` at the public ImageCache API boundary
+                        // because `ImageCacheResult` is public and not extended for this
+                        // internal optimization.
+                        // Manager-mediated view loading paths rely on
+                        // `sourceTaskIdentifierChecker` to short-circuit stale `.none`
+                        // results before retry / fallback logic.
                         callbackQueue.execute { completionHandler(.success(.none)) }
-                        return
-                    }
 
-                    // Cache the disk image to memory.
-                    // We are passing `false` to `toDisk`, the memory cache does not change
-                    // callback queue, we can call `completionHandler` without another dispatch.
-                    var cacheOptions = options
-                    cacheOptions.callbackQueue = .untouch
-                    self.store(
-                        image,
-                        forKey: key,
-                        options: cacheOptions,
-                        toDisk: false)
-                    {
-                        _ in
-                        callbackQueue.execute { completionHandler(.success(.disk(image))) }
+                    case .notFound:
+                        callbackQueue.execute { completionHandler(.success(.none)) }
+
+                    case .image(let image):
+                        // Cache the disk image to memory.
+                        // We are passing `false` to `toDisk`, the memory cache does not change
+                        // callback queue, we can call `completionHandler` without another dispatch.
+                        var cacheOptions = options
+                        cacheOptions.callbackQueue = .untouch
+                        self.store(
+                            image,
+                            forKey: key,
+                            options: cacheOptions,
+                            toDisk: false)
+                        {
+                            _ in
+                            callbackQueue.execute { completionHandler(.success(.disk(image))) }
+                        }
                     }
                 case .failure(let error):
                     callbackQueue.execute { completionHandler(.failure(error)) }
@@ -719,15 +728,30 @@ open class ImageCache: @unchecked Sendable {
         return retrieveImageInMemoryCache(forKey: key, options: KingfisherParsedOptionsInfo(options))
     }
 
+    /// Represents the outcome of a disk cache retrieval, distinguishing between
+    /// a genuine cache miss and a stale task that was intentionally skipped.
+    internal enum DiskRetrievalOutcome: Sendable {
+        case image(KFCrossPlatformImage)
+        case notFound
+        case stale
+    }
+
     func retrieveImageInDiskCache(
         forKey key: String,
         options: KingfisherParsedOptionsInfo,
         callbackQueue: CallbackQueue = .untouch,
-        completionHandler: @escaping @Sendable (Result<KFCrossPlatformImage?, KingfisherError>) -> Void)
+        outcomeHandler: @escaping @Sendable (Result<DiskRetrievalOutcome, KingfisherError>) -> Void)
     {
         let computedKey = key.computedKey(with: options.processor.identifier)
         let loadingQueue: CallbackQueue = options.loadDiskFileSynchronously ? .untouch : .dispatch(ioQueue)
         loadingQueue.execute {
+            // CHECK 1: For blocks queued on the serial ioQueue, the task is likely
+            // already stale by the time execution begins during fast scrolling.
+            if options.isSourceTaskStale {
+                callbackQueue.execute { outcomeHandler(.success(.stale)) }
+                return
+            }
+
             do {
                 var image: KFCrossPlatformImage? = nil
                 if let data = try self.diskStorage.value(
@@ -735,16 +759,53 @@ open class ImageCache: @unchecked Sendable {
                     forcedExtension: options.forcedExtension,
                     extendingExpiration: options.diskCacheAccessExtendingExpiration
                 ) {
+                    // CHECK 2: Disk read completed but deserialization has not started.
+                    // Catches staleness that occurred during a slow disk read.
+                    if options.isSourceTaskStale {
+                        callbackQueue.execute { outcomeHandler(.success(.stale)) }
+                        return
+                    }
                     image = options.cacheSerializer.image(with: data, options: options)
+                }
+                // CHECK 3: After deserialization but before background decode.
+                if image != nil, options.isSourceTaskStale {
+                    callbackQueue.execute { outcomeHandler(.success(.stale)) }
+                    return
                 }
                 if options.backgroundDecode {
                     image = image?.kf.decoded(scale: options.scaleFactor)
                 }
-                callbackQueue.execute { [image] in completionHandler(.success(image)) }
+                if let image = image {
+                    callbackQueue.execute { outcomeHandler(.success(.image(image))) }
+                } else {
+                    callbackQueue.execute { outcomeHandler(.success(.notFound)) }
+                }
             } catch let error as KingfisherError {
-                callbackQueue.execute { completionHandler(.failure(error)) }
+                callbackQueue.execute { outcomeHandler(.failure(error)) }
             } catch {
                 assertionFailure("The internal thrown error should be a `KingfisherError`.")
+            }
+        }
+    }
+
+    /// Convenience overload for the public API and callers that
+    /// don't need to distinguish stale from not-found.
+    func retrieveImageInDiskCache(
+        forKey key: String,
+        options: KingfisherParsedOptionsInfo,
+        callbackQueue: CallbackQueue = .untouch,
+        completionHandler: @escaping @Sendable (Result<KFCrossPlatformImage?, KingfisherError>) -> Void)
+    {
+        retrieveImageInDiskCache(forKey: key, options: options, callbackQueue: callbackQueue) {
+            outcome in
+            switch outcome {
+            case .success(let diskOutcome):
+                switch diskOutcome {
+                case .image(let img): completionHandler(.success(img))
+                case .notFound, .stale: completionHandler(.success(nil))
+                }
+            case .failure(let error):
+                completionHandler(.failure(error))
             }
         }
     }
@@ -868,31 +929,46 @@ open class ImageCache: @unchecked Sendable {
     @objc public func backgroundCleanExpiredDiskCache() {
         // if 'sharedApplication()' is unavailable, then return
         guard let sharedApplication = KingfisherWrapper<UIApplication>.shared else { return }
-        
-        let taskActor = ActorBox<UIBackgroundTaskIdentifier?>(nil)
-        
-        let createdTask = sharedApplication.beginBackgroundTask(withName: "Kingfisher:backgroundCleanExpiredDiskCache") {
-            Task {
-                guard let bgTask = await taskActor.value, bgTask != .invalid else { return }
-                sharedApplication.endBackgroundTask(bgTask)
-                await taskActor.setValue(.invalid)
+
+        actor BackgroundTaskState {
+            private var value: UIBackgroundTaskIdentifier? = nil
+
+            func setValue(_ newValue: UIBackgroundTaskIdentifier) {
+                value = newValue
+            }
+
+            func takeValidValueAndInvalidate() -> UIBackgroundTaskIdentifier? {
+                guard let task = value, task != .invalid else { return nil }
+                value = .invalid
+                return task
             }
         }
-        
-        cleanExpiredDiskCache {
-            Task {
-                guard let bgTask = await taskActor.value, bgTask != .invalid else { return }
+
+        let taskState = BackgroundTaskState()
+
+        let endBackgroundTaskIfNeeded: @Sendable () -> Void = {
+            Task { @MainActor in
+                guard let bgTask = await taskState.takeValidValueAndInvalidate() else { return }
+                guard let sharedApplication = KingfisherWrapper<UIApplication>.shared else { return }
                 #if compiler(>=6)
                 sharedApplication.endBackgroundTask(bgTask)
                 #else
                 await sharedApplication.endBackgroundTask(bgTask)
                 #endif
-                await taskActor.setValue(.invalid)
             }
         }
-        
-        Task {
-            await taskActor.setValue(createdTask)
+
+        let createdTask = sharedApplication.beginBackgroundTask(
+            withName: "Kingfisher:backgroundCleanExpiredDiskCache",
+            expirationHandler: endBackgroundTaskIfNeeded
+        )
+
+        Task { await taskState.setValue(createdTask) }
+
+        cleanExpiredDiskCache {
+            Task { @MainActor in
+                endBackgroundTaskIfNeeded()
+            }
         }
     }
 #endif
@@ -923,6 +999,81 @@ open class ImageCache: @unchecked Sendable {
         if memoryStorage.isCached(forKey: computedKey) { return .memory }
         if diskStorage.isCached(forKey: computedKey, forcedExtension: forcedExtension) { return .disk }
         return .none
+    }
+
+    /// Checks cache type for a given key and processor identifier combination asynchronously.
+    ///
+    /// This method is an opt-in alternative to ``imageCachedType(forKey:processorIdentifier:forcedExtension:)``.
+    /// It performs any disk existence/meta check on the cache's I/O queue to avoid blocking the calling thread.
+    ///
+    /// - Parameters:
+    ///   - key: The key used for caching the image.
+    ///   - identifier: The processor identifier used for this image. The default value is the
+    ///     ``DefaultImageProcessor/identifier`` of the ``DefaultImageProcessor/default`` image processor.
+    ///   - forcedExtension: The expected extension of the file. If `nil`, the file extension will be determined by the
+    ///     disk storage configuration instead.
+    ///   - callbackQueue: The callback queue on which the `completionHandler` is invoked. Default is `.mainCurrentOrAsync`.
+    ///   - completionHandler: Called with the resolved ``CacheType``.
+    public func imageCachedTypeAsync(
+        forKey key: String,
+        processorIdentifier identifier: String = DefaultImageProcessor.default.identifier,
+        forcedExtension: String? = nil,
+        callbackQueue: CallbackQueue = .mainCurrentOrAsync,
+        completionHandler: @escaping @Sendable (CacheType) -> Void
+    ) {
+        let computedKey = key.computedKey(with: identifier)
+
+        // Memory cache check remains synchronous (no I/O).
+        if memoryStorage.isCached(forKey: computedKey) {
+            callbackQueue.execute {
+                completionHandler(.memory)
+            }
+            return
+        }
+
+        // Disk cache check on the I/O queue.
+        ioQueue.async { [weak self] in
+            guard let self else {
+                callbackQueue.execute {
+                    completionHandler(.none)
+                }
+                return
+            }
+
+            let cached = self.diskStorage.isCached(forKey: computedKey, forcedExtension: forcedExtension)
+            let result: CacheType = cached ? .disk : .none
+            callbackQueue.execute {
+                completionHandler(result)
+            }
+        }
+    }
+
+    /// Checks cache type for a given key and processor identifier combination asynchronously.
+    ///
+    /// This is an `async`/`await` convenience wrapper of
+    /// ``imageCachedTypeAsync(forKey:processorIdentifier:forcedExtension:callbackQueue:completionHandler:)``.
+    ///
+    /// - Parameters:
+    ///   - key: The key used for caching the image.
+    ///   - identifier: The processor identifier used for this image.
+    ///   - forcedExtension: The expected extension of the file.
+    ///
+    /// - Returns: A ``CacheType`` instance that indicates the cache status.
+    public func imageCachedTypeAsync(
+        forKey key: String,
+        processorIdentifier identifier: String = DefaultImageProcessor.default.identifier,
+        forcedExtension: String? = nil
+    ) async -> CacheType {
+        await withCheckedContinuation { continuation in
+            imageCachedTypeAsync(
+                forKey: key,
+                processorIdentifier: identifier,
+                forcedExtension: forcedExtension,
+                callbackQueue: .untouch
+            ) { cacheType in
+                continuation.resume(returning: cacheType)
+            }
+        }
     }
     
     /// Returns whether the file exists in the cache for a given `key` and `identifier` combination.
@@ -1292,7 +1443,8 @@ extension KingfisherWrapper where Base: UIApplication {
     public static var shared: UIApplication? {
         let selector = NSSelectorFromString("sharedApplication")
         guard Base.responds(to: selector) else { return nil }
-        return Base.perform(selector).takeUnretainedValue() as? UIApplication
+        guard let unmanaged = Base.perform(selector) else { return nil }
+        return unmanaged.takeUnretainedValue() as? UIApplication
     }
 }
 #endif

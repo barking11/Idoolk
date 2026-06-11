@@ -45,7 +45,13 @@ public class SessionDataTask: @unchecked Sendable {
     public var mutableData: Data {
         lock.lock()
         defer { lock.unlock() }
-        return _mutableData
+        return Data(_mutableData)
+    }
+
+    var mutableDataCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return _mutableData.count
     }
 
     // This is a copy of `task.originalRequest?.url`. It is for obtaining race-safe behavior for a pitfall on iOS 13.
@@ -68,6 +74,14 @@ public class SessionDataTask: @unchecked Sendable {
 
     private var currentToken = 0
     private let lock = NSLock()
+    
+    private var _metrics: NetworkMetrics?
+    /// The network metrics collected during the download task.
+    public var metrics: NetworkMetrics? {
+        lock.lock()
+        defer { lock.unlock() }
+        return _metrics
+    }
 
     let onTaskDone = Delegate<(Result<(Data, URLResponse?), KingfisherError>, [TaskCallback]), Void>()
     let onCallbackCancelled = Delegate<(CancelToken, TaskCallback), Void>()
@@ -138,5 +152,11 @@ public class SessionDataTask: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         _mutableData.append(data)
+    }
+    
+    func didCollectMetrics(_ metrics: NetworkMetrics) {
+        lock.lock()
+        defer { lock.unlock() }
+        _metrics = metrics
     }
 }

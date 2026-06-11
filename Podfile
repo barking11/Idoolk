@@ -1,4 +1,4 @@
-source 'https://mirrors.tuna.tsinghua.edu.cn/git/CocoaPods/Specs.git'
+source 'https://cdn.cocoapods.org/'
 
 platform :ios, '17.0'
 
@@ -10,6 +10,7 @@ target 'Idoolk' do
 
   pod 'Kingfisher'
   pod 'Alamofire'
+  pod 'GDTMobSDK'
 
 
 end

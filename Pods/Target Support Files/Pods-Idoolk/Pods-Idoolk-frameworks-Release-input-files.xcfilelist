@@ -1,3 +1,5 @@
 ${PODS_ROOT}/Target Support Files/Pods-Idoolk/Pods-Idoolk-frameworks.sh
 ${BUILT_PRODUCTS_DIR}/Alamofire/Alamofire.framework
 ${BUILT_PRODUCTS_DIR}/Kingfisher/Kingfisher.framework
+${PODS_XCFRAMEWORKS_BUILD_DIR}/GDTMobSDK/GDTMobSDK.framework/GDTMobSDK
+${PODS_XCFRAMEWORKS_BUILD_DIR}/GDTMobSDK/Tquic.framework/Tquic

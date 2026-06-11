@@ -11,8 +11,11 @@ import MessageUI
 
 @main
 struct IdoolkApp: App {
+    @StateObject private var appState = AppState()
+
     init() {
         LoadingManager.shared.customImage = "loading_icon"
+        GDTAdService.shared.start()
 
         configureTransparentTabBar()
         
@@ -45,7 +48,7 @@ struct IdoolkApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(RealmManager.shared)
-                .environmentObject(AppState())
+                .environmentObject(appState)
                 .modelContainer(RealmManager.shared.modelContainer)
         }
     }
@@ -67,6 +70,10 @@ class AppState: ObservableObject {
     // 应用程序从后台进入前台时触发刷新
     @objc private func appWillEnterForeground() {
         needsRefresh = true
+
+        Task { @MainActor in
+            GDTAdService.shared.showSplash()
+        }
         
         // 重置状态，以便下次可以再次触发
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
