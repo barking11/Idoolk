@@ -72,6 +72,7 @@ struct MovieSection: Identifiable {
 
 class MovieViewModel: ObservableObject {
     @Published var sections: [MovieSection] = []
+    @Published var banners: [HomeBanner] = []
     @Published var movieGroups: [MovieGroup] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
@@ -116,11 +117,7 @@ class MovieViewModel: ObservableObject {
         // 处理从API获取的数据
         var newSections: [MovieSection] = []
         
-        // 处理热门剧集（banner）
-        let bannerMovies = response.banner.map { $0.toMovie() }
-        if !bannerMovies.isEmpty {
-            newSections.append(MovieSection(title: "热门剧集", movies: bannerMovies))
-        }
+        banners = response.banner
         
         // 处理最新上线
         let newMovies = response.newcome.map { $0.toMovie() }
@@ -132,6 +129,12 @@ class MovieViewModel: ObservableObject {
         let hotMovies = response.hot.map { $0.toMovie() }
         if !hotMovies.isEmpty {
             newSections.append(MovieSection(title: "热播剧", movies: hotMovies))
+        }
+
+        // 处理高分剧集
+        let topRatedMovies = response.topRated.map { $0.toMovie() }
+        if !topRatedMovies.isEmpty {
+            newSections.append(MovieSection(title: "高分剧集", movies: topRatedMovies))
         }
         
         // 保存电影分组数据
@@ -149,13 +152,18 @@ class MovieViewModel: ObservableObject {
     // Image URL helper
     func getImageURL(path: String?, size: String = "w500") -> URL? {
         guard let path = path else { return nil }
+        if path.hasPrefix("http://") || path.hasPrefix("https://") {
+            return URL(string: path)
+        }
         return URL(string: "https://image.tmdb.org/t/p/\(size)\(path)")
     }
     
     // 获取评论信息
     func getReviewFor(movie: Movie, in response: HomeResponse) -> Movie.Review? {
-        if let dto = response.banner.first(where: { $0.id == movie.id }) {
-            return Movie(adult: movie.adult, backdropPath: movie.backdropPath, genreIds: movie.genreIds, id: movie.id, originCountry: movie.originCountry, originalLanguage: movie.originalLanguage, originalName: movie.originalName, overview: movie.overview, popularity: movie.popularity, posterPath: movie.posterPath, firstAirDate: movie.firstAirDate, name: movie.name, voteAverage: movie.voteAverage, voteCount: movie.voteCount).getReview(from: dto)
+        if let banner = response.banner.first(where: { $0.targetTitle?.id == movie.id }),
+           let name = banner.userNickname,
+           let content = banner.comment {
+            return Movie.Review(name: name, content: content)
         }
         return nil
     }

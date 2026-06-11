@@ -70,115 +70,19 @@ import Combine
 //    }
 //}
 //
-//// 特别推荐区
-struct MovieSectionFeatured: View {
-    let section: MovieSection
+// 首页 Banner 区
+struct HomeBannerFeaturedView: View {
+    let banners: [HomeBanner]
     @State private var currentTab = 0
     @State private var timer: Timer.TimerPublisher = Timer.publish(every: 5, on: .main, in: .common)
     @State private var timerCancellable: Cancellable? = nil
-    
-    // 存储取消器的集合
     @State private var setupCancellables = Set<AnyCancellable>()
-    @State private var apiResponse: HomeResponse? = nil
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             TabView(selection: $currentTab) {
-                ForEach(Array(zip(section.movies.indices, section.movies)), id: \.0) { index, movie in
-                    NavigationLink(destination: DetailView(movie: movie)) {
-                        ZStack(alignment: .bottomLeading) {
-                            // 背景图片
-                            KFImage(MovieViewModel().getImageURL(path: movie.backdropPath, size: "w780"))
-                                .placeholder {
-                                    Rectangle()
-                                        .fill(Color.gray.opacity(0.2))
-                                        .overlay(
-                                            Image(systemName: "photo")
-                                                .font(.largeTitle)
-                                                .foregroundColor(.gray)
-                                        )
-                                }
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: UIScreen.main.bounds.size.width, height: 400)
-                                .clipped()
-                            
-                            // 渐变遮罩
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.black.opacity(0), Color.black.opacity(0.5)]),
-                                startPoint: .bottom,
-                                endPoint: .top
-                            )
-                            .frame(height: 400)
-                            
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.black.opacity(0.8), Color.black.opacity(0)]),
-                                startPoint: .bottom,
-                                endPoint: .center
-                            )
-                            .frame(height: 400)
-                            
-                            // 内容信息
-                            VStack(alignment: .leading, spacing: 8) {
-                                // 标题
-                                Text(movie.name)
-                                    .font(.system(size: 28, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
-                                
-                                // 评分和类型
-                                HStack(spacing: 8) {
-                                    HStack(spacing: 4) {
-                                        Image("rating_star")
-                                            .resizable()
-                                            .frame(width: 15, height: 15)
-                                        
-                                        Text(String(format: "%.1f", movie.voteAverage))
-                                            .font(.system(size: 16, weight: .medium))
-                                            .foregroundColor(.white)
-                                    }
-                                    
-                                    Text("·")
-                                        .foregroundColor(.white.opacity(0.7))
-                                    
-                                    Text(MovieSection.getGenreString(for: movie.genreIds))
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.white.opacity(0.7))
-                                }
-                                
-                                // 用户评论替代简介
-                                HStack(alignment: .top, spacing: 8) {
-                                    // 大引号
-                                    Text("“")
-                                        .font(.system(size: 40, weight: .bold))
-                                        .foregroundColor(AppColors.primary.opacity(0.7))
-                                        .offset(y: -8)
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        // 从API获取的评论内容或者显示概述
-                                        Text(getReviewContent(for: movie) ?? movie.overview)
-                                            .font(.system(size: 14))
-                                            .foregroundColor(.white.opacity(0.9))
-                                            .lineLimit(2)
-                                        
-                                        // 用户昵称
-                                        if let reviewName = getReviewName(for: movie) {
-                                            HStack {
-                                                Spacer()
-                                                
-                                                Text("—— \(reviewName)")
-                                                    .font(.system(size: 12, weight: .medium))
-                                                    .foregroundColor(.white.opacity(0.9))
-                                            }
-                                        }
-                                    }
-                                }
-                                .padding(.top, 8)
-                                .padding(.bottom, 20)
-                            }
-                            .padding(24)
-                        }
-                    }
+                ForEach(Array(banners.enumerated()), id: \.element.id) { index, banner in
+                    bannerContent(banner)
                     .tag(index)
                 }
             }
@@ -186,15 +90,110 @@ struct MovieSectionFeatured: View {
             .tabViewStyle(PageTabViewStyle())
             .padding(.bottom, 8)
             .onAppear {
-                // 启动自动轮播计时器
                 startTimer()
-                // 获取API数据以显示评论
-                fetchApiData()
             }
             .onDisappear {
-                // 停止计时器
                 stopTimer()
             }
+        }
+    }
+
+    @ViewBuilder
+    private func bannerContent(_ banner: HomeBanner) -> some View {
+        if let movie = banner.targetMovie {
+            NavigationLink(destination: DetailView(movie: movie)) {
+                bannerCard(banner)
+            }
+        } else {
+            bannerCard(banner)
+        }
+    }
+
+    private func bannerCard(_ banner: HomeBanner) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            KFImage(URL(string: banner.imageUrl))
+                .placeholder {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                        .overlay(
+                            Image(systemName: "photo")
+                                .font(.largeTitle)
+                                .foregroundColor(.gray)
+                        )
+                }
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: UIScreen.main.bounds.size.width, height: 400)
+                .clipped()
+
+            LinearGradient(
+                gradient: Gradient(colors: [Color.black.opacity(0), Color.black.opacity(0.5)]),
+                startPoint: .bottom,
+                endPoint: .top
+            )
+            .frame(height: 400)
+
+            LinearGradient(
+                gradient: Gradient(colors: [Color.black.opacity(0.82), Color.black.opacity(0)]),
+                startPoint: .bottom,
+                endPoint: .center
+            )
+            .frame(height: 400)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(banner.title)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
+
+                if let movie = banner.targetMovie {
+                    HStack(spacing: 8) {
+                        HStack(spacing: 4) {
+                            Image("rating_star")
+                                .resizable()
+                                .frame(width: 15, height: 15)
+
+                            Text(String(format: "%.1f", movie.voteAverage))
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.white)
+                        }
+
+                        Text("·")
+                            .foregroundColor(.white.opacity(0.7))
+
+                        Text(MovieSection.getGenreString(for: movie.genreIds))
+                            .font(.system(size: 14))
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                }
+
+                HStack(alignment: .top, spacing: 8) {
+                    Text("“")
+                        .font(.system(size: 40, weight: .bold))
+                        .foregroundColor(AppColors.primary.opacity(0.7))
+                        .offset(y: -8)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(banner.comment ?? banner.targetMovie?.overview ?? "")
+                            .font(.system(size: 14))
+                            .foregroundColor(.white.opacity(0.9))
+                            .lineLimit(2)
+
+                        if let nickname = banner.userNickname, !nickname.isEmpty {
+                            HStack {
+                                Spacer()
+
+                                Text("—— \(nickname)")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.white.opacity(0.9))
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 8)
+                .padding(.bottom, 20)
+            }
+            .padding(24)
         }
     }
     
@@ -208,7 +207,7 @@ struct MovieSectionFeatured: View {
             .autoconnect()
             .sink { _ in
                 withAnimation {
-                    currentTab = (currentTab - 1 + section.movies.count) % section.movies.count
+                    currentTab = (currentTab + 1) % max(banners.count, 1)
                 }
             }
             .store(in: &setupCancellables)
@@ -219,40 +218,4 @@ struct MovieSectionFeatured: View {
         timerCancellable?.cancel()
         timerCancellable = nil
     }
-    
-    // 获取API数据
-    private func fetchApiData() {
-        APIService.shared.fetchHomeData()
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { _ in },
-                receiveValue: { response in
-                    self.apiResponse = response
-                }
-            )
-            .store(in: &setupCancellables)
-    }
-    
-    // 获取电影的评论内容
-    private func getReviewContent(for movie: Movie) -> String? {
-        guard let apiResponse = apiResponse else { return nil }
-        
-        // 在banner中查找匹配的电影
-        if let dto = apiResponse.banner.first(where: { $0.id == movie.id }) {
-            return dto.reviewContent
-        }
-        return nil
-    }
-    
-    // 获取电影的评论人名称
-    private func getReviewName(for movie: Movie) -> String? {
-        guard let apiResponse = apiResponse else { return nil }
-        
-        // 在banner中查找匹配的电影
-        if let dto = apiResponse.banner.first(where: { $0.id == movie.id }) {
-            return dto.reviewName
-        }
-        return nil
-    }
 }
-

@@ -81,7 +81,7 @@ enum APIError: Error {
 class APIService {
     static let shared = APIService()
     
-    private let baseURL = "https://home-f30809.gitlab.io"
+    private let baseURL = "http://192.168.77.20:3000/api"
     private let tmdbBaseURL = "https://api.tmdb.org/3"
     private let tmdbApiKey = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyYzFkMjAxMmYzYmJiYWRmZTI1ZGQ4OTEwMDA5MDkxNSIsIm5iZiI6MTc0MTc2MDYxMy44MjA5OTk5LCJzdWIiOiI2N2QxMjg2NWI1ZWUwZTM5N2M2MGJkYzYiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.-34tNmfL34IATdvvuTZtXOrAe9H1VYvF-K8u9rtJ6Ds"
     private let session: Session
@@ -106,7 +106,7 @@ class APIService {
     // 获取首页数据（支持缓存）
     func fetchHomeData() -> AnyPublisher<HomeResponse, APIError> {
         let cacheKey = "home_data" as NSString
-        let urlString = baseURL
+        let urlString = "\(baseURL)/app/home"
         
         // 检查是否有有效缓存
         if let cachedData = cache.object(forKey: cacheKey) as Data?,
@@ -410,4 +410,3 @@ class APIService {
         lastFetchTime.removeAll()
     }
 }
-

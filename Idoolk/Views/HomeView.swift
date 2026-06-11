@@ -18,22 +18,20 @@ struct HomeView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     // 特别推荐区 - 从顶部开始
-                    if !viewModel.sections.isEmpty {
-                        MovieSectionFeatured(section: viewModel.sections[0])
+                    if !viewModel.banners.isEmpty {
+                        HomeBannerFeaturedView(banners: viewModel.banners)
                             .padding(.top, 0)
                     }
                     
                     // 分区内容
                     LazyVStack(spacing: 0, pinnedViews: []) {
                         ForEach(Array(viewModel.sections.enumerated()), id: \.offset) { index, section in
-                            if index > 0 { // 跳过第一个，因为已经在特别推荐区显示
-                                if index == 1 || index == 2 {
-                                    MovieSectionRegular(section: section)
-                                        .padding(.bottom, 30)
-                                } else {
-                                    MovieSectionList(section: section)
-                                        .padding(.bottom, 30)
-                                }
+                            if index == 0 || index == 1 {
+                                MovieSectionRegular(section: section)
+                                    .padding(.bottom, 30)
+                            } else {
+                                MovieSectionList(section: section)
+                                    .padding(.bottom, 30)
                             }
                         }
                         
@@ -286,4 +284,3 @@ struct MovieSectionList: View {
         }
     }
 }
-
